@@ -1,7 +1,8 @@
+const { request, response } = require("express");
 const express = require("express");
 const uuid = require("uuid");
 
-const acount = [];
+const customers = [];
 
 const app = express();
 
@@ -32,15 +33,29 @@ app.delete("/courses/:id", (req, res) => {
 
 app.post("/account", (req, res) => {
   const newUser = { ...req.body, id: uuid.v4(), statement: [] };
-  if (acount.some((user) => user.cpf === newUser.cpf))
+  if (customers.some((user) => user.cpf === newUser.cpf))
     return res.status(400).json({
       msg: "cpf already in use",
     });
-  acount.push(newUser);
+  customers.push(newUser);
   return res.status(201).json({
     msg: "created",
     id: newUser.id,
   });
+});
+
+app.get("/statement/:cpf", (req, res) => {
+  const { cpf } = req.params;
+
+  const customer = customers.find((user) => user.cpf === cpf);
+
+  if (!customer) {
+    return res.status(400).json({
+      msg: "costumer not found",
+    });
+  }
+
+  return res.json(customer.statement);
 });
 
 app.listen(3333);
