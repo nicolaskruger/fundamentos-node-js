@@ -24,6 +24,18 @@ const verifyIfExistsAccountCPF = (request, response, next) => {
   return next();
 };
 
+const getBalance = (statement) => {
+  const balance = statement.reduce((acc, curr) => {
+    if (curr.type === "credit") {
+      return acc + curr.amount;
+    } else {
+      return acc - curr.amount;
+    }
+  }, 0);
+
+  return balance;
+};
+
 app.get("/courses", (req, res) => {
   const query = req.query;
   return res.json(["Curson 1", "Curson 2", "Curson 3"]);
@@ -60,7 +72,17 @@ app.post("/account", (req, res) => {
   });
 });
 
-app.get("/statement/:cpf", verifyIfExistsAccountCPF, (req, res) => {
+app.get("/statement/date", verifyIfExistsAccountCPF, (req, res) => {
+  const { customer } = req;
+  const date = new Date(req.query.date + " 00:00");
+  return res.json(
+    customer.statement.filter(
+      (operation) => new Date(operation.created_at).getTime() === date.getTime()
+    )
+  );
+});
+
+app.get("/statement", verifyIfExistsAccountCPF, (req, res) => {
   return res.json(req.customer.statement);
 });
 
@@ -68,15 +90,42 @@ app.post("/deposit", verifyIfExistsAccountCPF, (req, res) => {
   const { description, amount } = req.body;
   const { customer } = req;
 
+  const created_at = new Date();
+  created_at.setHours(0, 0, 0, 0);
+
   customer.statement.push({
     description,
     amount,
-    created_at: new Date(),
+    created_at,
     type: "credit",
   });
 
   return res.status(201).json({
     msg: "deposit with succes",
+  });
+});
+
+app.post("/withdraw", verifyIfExistsAccountCPF, (req, res) => {
+  const { description, amount } = req.body;
+  const { customer } = req;
+
+  const balance = getBalance(customer.statement);
+
+  if (balance < amount) {
+    return res.status(400).json({
+      msg: "not enough cash",
+    });
+  }
+
+  customer.statement.push({
+    description,
+    amount,
+    created_at: new Date(),
+    type: "withdraw",
+  });
+
+  return res.status(201).json({
+    msg: "withdraw with succes",
   });
 });
 
