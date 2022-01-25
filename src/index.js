@@ -4,7 +4,7 @@ const app = express();
 
 app.get("/", (req, res) => {
   return res.json({
-    msg: "sucsses",
+    msg: "fundamentos node js! ",
   });
 });
 
